@@ -11,6 +11,7 @@ public class Client extends Thread {
 	private DatagramSocket socket;
 	private Socket tcpSocket;
 	private DataInputStream dis;
+	private DataOutputStream dos;
 	private boolean running;
 	private int port;
 	private int tcpPort;
@@ -39,6 +40,7 @@ public class Client extends Thread {
 			System.out.println("Client trying to connect TCP");
 			tcpSocket = new Socket(address, tcpPort);
 			dis = new DataInputStream(tcpSocket.getInputStream());
+			dos = new DataOutputStream(tcpSocket.getOutputStream());
 			w = dis.readInt();
 			h = dis.readInt();
 			System.out.println("Client TCP connected");
@@ -62,13 +64,23 @@ public class Client extends Thread {
 		}
 		while (running) {
 			try{
+				int[] gaze = getGaze();
+				dos.writeInt(gaze[0]);
+				dos.writeInt(gaze[1]);
+				dos.writeInt(gaze[2]);
 				int size = dis.readInt();
 				byte[] received = new byte[size];
 				dis.readFully(received);
 				int i = 0;
+				int val = image.getRGB(0, 0);
+				int oldX = 0;
 				while (i < received.length-6){
 					int x = ((received[i]&0xFF) << 16) + ((received[i+1]&0xFF) << 8) + (received[i+2]&0xFF);
-					int val = ((-1&0xFF) << 24) + ((received[i+3]&0xFF) << 16) + ((received[i+4]&0xFF) << 8) + (received[i+5]&0xFF);
+					while (oldX < x){
+						image.setRGB((x/3)%w, (x/3)/w, val);
+						oldX += 1;
+					}
+					val = ((-1&0xFF) << 24) + ((received[i+3]&0xFF) << 16) + ((received[i+4]&0xFF) << 8) + (received[i+5]&0xFF);
 					image.setRGB((x/3)%w, (x/3)/w, val);
 					i+=6;
 				}
@@ -87,6 +99,11 @@ public class Client extends Thread {
 			System.out.println("Client error relinquishing connections");
 			e.printStackTrace();
 		}
+	}
+
+	//Placeholder method for getting eyetracker information
+	private int[] getGaze(){
+		return new int[]{0, 0, 0};
 	}
 
 	private void write(String s){
