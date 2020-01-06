@@ -109,7 +109,7 @@ public class Server extends Thread {
 					if (r == Double.NaN){
 						r = 2.0*h/3;
 					}
-					HashMap<Integer, Integer> compressedFrame = new HashMap<>();
+					LinkedHashMap<Integer, Integer> compressedFrame = new LinkedHashMap<>();
 					LinkedHashMap<Integer, byte[]> spatialCompression = interFrameEncode(frame, gazeX, gazeY, r);
 					change = false;
 					int threshold = -1;
@@ -173,8 +173,7 @@ public class Server extends Thread {
 						previous[px.getKey()-2] = px.getValue()[0];
 						previous[px.getKey()-1] = px.getValue()[1];
 						previous[px.getKey()] = px.getValue()[2];
-						old++;
-
+						old = px.getKey() + 2;
 					}
 				}
 			}
@@ -205,9 +204,10 @@ public class Server extends Thread {
 			else {
 				thresh = SPATIAL_THRESH_LD;
 			}
-			if ((Math.abs(reference[0] - (int) frame[x - 2]) > thresh)
+			if (((Math.abs(reference[0] - (int) frame[x - 2]) > thresh)
 					||(Math.abs(reference[1] - (int) frame[x - 1]) > thresh)
-					||(Math.abs(reference[2] - (int) frame[x]) > thresh)){
+					||(Math.abs(reference[2] - (int) frame[x]) > thresh))
+					||(x/3)%w ==2){
 				encoded.put(x, new byte[]{frame[x-2], frame[x-1], frame[x]});
 				reference = new int[]{(int) frame[x-2], (int)frame[x-1], (int)frame[x]};
 			}

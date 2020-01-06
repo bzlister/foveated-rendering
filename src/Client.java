@@ -75,12 +75,12 @@ public class Client extends Thread {
 				int i = 0;
 				int oldX = 2;
 				while (i < received.length-6){
-					int x = ((received[i]&0xFF) << 16) + ((received[i+1]&0xFF) << 8) + (received[i+2]&0xFF);
+					int x =((0&0xFF) << 24) + ((received[i]&0xFF) << 16) + ((received[i+1]&0xFF) << 8) + (received[i+2]&0xFF);
 					while (oldX < x){
-						image.setRGB((x/3)%w, (x/3)/w, val);
+						image.setRGB((oldX/3)%w, (oldX/3)/w, val);
 						oldX += 1;
 					}
-					oldX += 1;
+					oldX = x + 2;
 					val = ((-1&0xFF) << 24) + ((received[i+3]&0xFF) << 16) + ((received[i+4]&0xFF) << 8) + (received[i+5]&0xFF);
 					image.setRGB((x/3)%w, (x/3)/w, val);
 					i+=6;
