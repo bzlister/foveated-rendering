@@ -11,6 +11,7 @@ import org.jcodec.common.model.ColorSpace;
 import org.jcodec.scale.Yuv420jToRgb;
 import java.net.DatagramSocket;
 import java.util.*;
+import java.lang.Math;
 
 public class Server extends Thread {
     private DatagramSocket socket;
@@ -27,14 +28,17 @@ public class Server extends Thread {
 	private int ldThresh;
 	private int hdThresh;
 	private int SPATIAL_THRESH_HD = 0;
-	private int SPATIAL_THRESH_LD = 5;
+	private int SPATIAL_THRESH_LD = 3;
+	private final double RADIUS_ANGLE = Math.tan((Math.PI/180)*7.5);
 
-    public Server(int port, int tcpPort, InetAddress address, int ldThresh, int hdThresh) {
+    public Server(int port, int tcpPort, InetAddress address, int ldThresh, int hdThresh, int spatial_ld, int spatial_hd) {
     	this.port = port;
     	this.address = address;
     	this.tcpPort = tcpPort;
     	this.ldThresh = ldThresh;
     	this.hdThresh = hdThresh;
+		SPATIAL_THRESH_LD = spatial_ld;
+    	SPATIAL_THRESH_HD = spatial_hd;
 		try{
 			socket = new DatagramSocket();
 			file = new File("C:/users/bzlis/IdeaProjects/foveated-rendering/src/main/resources/Wildlife.mp4");
@@ -101,12 +105,16 @@ public class Server extends Thread {
 					int gazeX = in.readInt();
 					int gazeY = in.readInt();
 					int gazeR = in.readInt();
+					double r = gazeR*RADIUS_ANGLE;
+					if (r == Double.NaN){
+						r = 2.0*h/3;
+					}
 					HashMap<Integer, Integer> compressedFrame = new HashMap<>();
-					HashMap<Integer, Integer> spatialCompression = interFrameEncode(frame);
+					LinkedHashMap<Integer, Integer> spatialCompression = interFrameEncode(frame, gazeX, gazeY, r);
 					change = false;
 					int threshold = -1;
 					for (int x = 2; x < frame.length; x += 3) {
-						if (((x/3)/w > h/3) && ((x/3)/w < 6*h/7)){ //Middle band
+						if (Math.pow((x/3)%w - gazeX, 2) + Math.pow((x/3)/w - gazeY, 2) < r*r){
 							threshold = hdThresh;
 						}
 						else {
@@ -170,12 +178,12 @@ public class Server extends Thread {
 		}
 	}
 
-	private HashMap<Integer, Integer> interFrameEncode(byte[] frame){
-    	HashMap<Integer, Integer> encoded = new HashMap<>();
+	private LinkedHashMap<Integer, Integer> interFrameEncode(byte[] frame, int gazeX, int gazeY, double r){
+    	LinkedHashMap<Integer, Integer> encoded = new LinkedHashMap<>();
     	int thresh = SPATIAL_THRESH_HD;
     	int[] reference = new int[]{(int)frame[0], (int)frame[1], (int)frame[2]};
     	for (int x = 5; x < frame.length; x+=3){
-			if (((x/3)/w > h/3) && ((x/3)/w < 6*h/7)){ //Middle band
+			if (Math.pow((x/3)%w - gazeX, 2) + Math.pow((x/3)/w - gazeY, 2) < r*r){ // In-focus region
 				thresh = SPATIAL_THRESH_HD;
 			}
 			else {

@@ -62,9 +62,10 @@ public class Client extends Thread {
 			System.out.println("Client error initializing TCP connection");
 			i.printStackTrace();
 		}
+		int val = image.getRGB(0, 0);
 		while (running) {
 			try{
-				int[] gaze = getGaze();
+				int[] gaze = getGaze(w, h);
 				dos.writeInt(gaze[0]);
 				dos.writeInt(gaze[1]);
 				dos.writeInt(gaze[2]);
@@ -72,7 +73,6 @@ public class Client extends Thread {
 				byte[] received = new byte[size];
 				dis.readFully(received);
 				int i = 0;
-				int val = image.getRGB(0, 0);
 				int oldX = 0;
 				while (i < received.length-6){
 					int x = ((received[i]&0xFF) << 16) + ((received[i+1]&0xFF) << 8) + (received[i+2]&0xFF);
@@ -80,6 +80,7 @@ public class Client extends Thread {
 						image.setRGB((x/3)%w, (x/3)/w, val);
 						oldX += 1;
 					}
+					oldX += 1;
 					val = ((-1&0xFF) << 24) + ((received[i+3]&0xFF) << 16) + ((received[i+4]&0xFF) << 8) + (received[i+5]&0xFF);
 					image.setRGB((x/3)%w, (x/3)/w, val);
 					i+=6;
@@ -102,8 +103,8 @@ public class Client extends Thread {
 	}
 
 	//Placeholder method for getting eyetracker information
-	private int[] getGaze(){
-		return new int[]{0, 0, 0};
+	private int[] getGaze(int w, int h){
+		return new int[]{w/2, h/2, 1000};
 	}
 
 	private void write(String s){
