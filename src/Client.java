@@ -73,7 +73,7 @@ public class Client extends Thread {
 				byte[] received = new byte[size];
 				dis.readFully(received);
 				int i = 0;
-				int oldX = 0;
+				int oldX = 2;
 				while (i < received.length-6){
 					int x = ((received[i]&0xFF) << 16) + ((received[i+1]&0xFF) << 8) + (received[i+2]&0xFF);
 					while (oldX < x){

@@ -99,6 +99,7 @@ public class Server extends Thread {
 					stream.writeInt(frame.length);
 					stream.write(frame);
 					first = false;
+					previous = frame;
 				}
 				else {
 					int gazeX = in.readInt();
@@ -132,7 +133,7 @@ public class Server extends Thread {
 							rgb[2] = frame[x];
 							change = true;
 						}
-						if (change && spatialCompression.containsKey(x)){
+						if (change){
 							compressedFrame.put(x, new Color((int)rgb[0]+128, (int)rgb[1]+128, (int)rgb[2]+128).getRGB());
 							changeCount++;
 						}
@@ -160,8 +161,22 @@ public class Server extends Thread {
 						//socket.send(packet);
 						stream.write(toBeSent);
 					}
+					int old = 2;
+					byte[] oldVals = new byte[]{previous[0], previous[1], previous[2]};
+					for (Map.Entry<Integer, byte[]> px : spatialCompression.entrySet()){
+						while (old < px.getKey()){
+							previous[old-2] = oldVals[0];
+							previous[old-1] = oldVals[1];
+							previous[old] = oldVals[2];
+							old++;
+						}
+						previous[px.getKey()-2] = px.getValue()[0];
+						previous[px.getKey()-1] = px.getValue()[1];
+						previous[px.getKey()] = px.getValue()[2];
+						old++;
+
+					}
 				}
-				previous = frame;
 			}
 			write(s);
 			stream.close();
@@ -182,7 +197,7 @@ public class Server extends Thread {
     	LinkedHashMap<Integer, byte[]> encoded = new LinkedHashMap<>();
     	int thresh = SPATIAL_THRESH_HD;
     	int[] reference = new int[]{(int)frame[0], (int)frame[1], (int)frame[2]};
-    	encoded.put(0, new byte[]{frame[0], frame[1], frame[2]});
+    	encoded.put(2, new byte[]{frame[0], frame[1], frame[2]});
     	for (int x = 5; x < frame.length; x+=3){
 			if (Math.pow((x/3)%w - gazeX, 2) + Math.pow((x/3)/w - gazeY, 2) < r*r){ // In-focus region
 				thresh = SPATIAL_THRESH_HD;
