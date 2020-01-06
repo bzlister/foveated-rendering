@@ -1,6 +1,5 @@
 import org.jcodec.common.model.Picture;
 import org.jcodec.api.FrameGrab;
-
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
@@ -110,7 +109,7 @@ public class Server extends Thread {
 						r = 2.0*h/3;
 					}
 					HashMap<Integer, Integer> compressedFrame = new HashMap<>();
-					LinkedHashMap<Integer, Integer> spatialCompression = interFrameEncode(frame, gazeX, gazeY, r);
+					LinkedHashMap<Integer, byte[]> spatialCompression = interFrameEncode(frame, gazeX, gazeY, r);
 					change = false;
 					int threshold = -1;
 					for (int x = 2; x < frame.length; x += 3) {
@@ -178,10 +177,12 @@ public class Server extends Thread {
 		}
 	}
 
-	private LinkedHashMap<Integer, Integer> interFrameEncode(byte[] frame, int gazeX, int gazeY, double r){
-    	LinkedHashMap<Integer, Integer> encoded = new LinkedHashMap<>();
+	// Note - considers a frame as a 1-D array, not a 2-D one, for terms of pixel locality. This is bad and needs to change
+	private LinkedHashMap<Integer, byte[]> interFrameEncode(byte[] frame, int gazeX, int gazeY, double r){
+    	LinkedHashMap<Integer, byte[]> encoded = new LinkedHashMap<>();
     	int thresh = SPATIAL_THRESH_HD;
     	int[] reference = new int[]{(int)frame[0], (int)frame[1], (int)frame[2]};
+    	encoded.put(0, new byte[]{frame[0], frame[1], frame[2]});
     	for (int x = 5; x < frame.length; x+=3){
 			if (Math.pow((x/3)%w - gazeX, 2) + Math.pow((x/3)/w - gazeY, 2) < r*r){ // In-focus region
 				thresh = SPATIAL_THRESH_HD;
@@ -192,7 +193,7 @@ public class Server extends Thread {
 			if ((Math.abs(reference[0] - (int) frame[x - 2]) > thresh)
 					||(Math.abs(reference[1] - (int) frame[x - 1]) > thresh)
 					||(Math.abs(reference[2] - (int) frame[x]) > thresh)){
-				encoded.put(x, new Color((int)frame[x-2]+128, (int)frame[x-1]+128, (int)frame[x]+128).getRGB());
+				encoded.put(x, new byte[]{frame[x-2], frame[x-1], frame[x]});
 				reference = new int[]{(int) frame[x-2], (int)frame[x-1], (int)frame[x]};
 			}
 		}
