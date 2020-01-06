@@ -5,6 +5,7 @@ import java.io.*;
 import java.net.InetAddress;
 import java.net.DatagramSocket;
 import java.net.Socket;
+import java.net.SocketException;
 
 public class Client extends Thread {
 
@@ -80,13 +81,18 @@ public class Client extends Thread {
 						image.setRGB((oldX/3)%w, (oldX/3)/w, val);
 						oldX += 1;
 					}
-					oldX = x + 2;
+					oldX = x+2;
 					val = ((-1&0xFF) << 24) + ((received[i+3]&0xFF) << 16) + ((received[i+4]&0xFF) << 8) + (received[i+5]&0xFF);
 					image.setRGB((x/3)%w, (x/3)/w, val);
 					i+=6;
 				}
 				player.loadFrame(image);
-			} catch (Exception e){
+			} catch (SocketException s){
+				System.out.println("Done");
+				running = false;
+				System.exit(0);
+			}
+			catch (Exception e){
 				e.printStackTrace();
 				System.out.println("Client error");
 				running = false;

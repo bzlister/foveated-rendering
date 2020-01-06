@@ -113,7 +113,7 @@ public class Server extends Thread {
 					LinkedHashMap<Integer, byte[]> spatialCompression = interFrameEncode(frame, gazeX, gazeY, r);
 					change = false;
 					int threshold = -1;
-					for (int x = 2; x < frame.length; x += 3) {
+					for (int x : spatialCompression.keySet()){
 						if (Math.pow((x/3)%w - gazeX, 2) + Math.pow((x/3)/w - gazeY, 2) < r*r){
 							threshold = hdThresh;
 						}
@@ -159,6 +159,7 @@ public class Server extends Thread {
 						stream.writeInt(toBeSent.length);
 						//DatagramPacket packet = new DatagramPacket(toBeSent, toBeSent.length, address, port);
 						//socket.send(packet);
+						System.out.println((toBeSent.length*1.0)/frame.length);
 						stream.write(toBeSent);
 					}
 					int old = 2;
@@ -173,7 +174,7 @@ public class Server extends Thread {
 						previous[px.getKey()-2] = px.getValue()[0];
 						previous[px.getKey()-1] = px.getValue()[1];
 						previous[px.getKey()] = px.getValue()[2];
-						old = px.getKey() + 2;
+						old = px.getKey()+2;
 					}
 				}
 			}
