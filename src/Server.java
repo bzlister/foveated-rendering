@@ -93,19 +93,17 @@ public class Server extends Thread {
 				if (first){
 					stream.writeInt(w);
 					stream.writeInt(h);
-					LinkedHashMap<Integer,  byte[]> spatialCompression = interFrameEncode(frame, w/2, h/2, 1000);
-					byte[] toBeSent = new byte[6*spatialCompression.size()];
+					LinkedList<Integer> referencePoints = interFrameEncode(frame, w/2, h/2, 1000);
+					byte[] toBeSent = new byte[6*referencePoints.size()];
 					int i = 0;
 					if (toBeSent.length > 0) {
-						for (Integer x : spatialCompression.keySet()) {
+						for (Integer x : referencePoints) {
 							toBeSent[i] = (byte) ((x & 0x00FF0000) >> 16);
 							toBeSent[i + 1] = (byte) ((x & 0x0000FF00) >> 8);
 							toBeSent[i + 2] = (byte) ((x & 0x000000FF) >> 0);
-							byte[] vals = spatialCompression.get(x);
-
-							toBeSent[i + 3] = vals[0];
-							toBeSent[i + 4] = vals[1];
-							toBeSent[i + 5] = vals[2];
+							toBeSent[i + 3] = frame[x-2]; // R
+							toBeSent[i + 4] = frame[x-1]; // G
+							toBeSent[i + 5] = frame[x]; // B
 							i += 6;
 						}
 						stream.writeInt(toBeSent.length);
@@ -125,10 +123,10 @@ public class Server extends Thread {
 						r = 2.0*h/3;
 					}
 					LinkedHashMap<Integer, byte[]> compressedFrame = new LinkedHashMap<>();
-					LinkedHashMap<Integer, byte[]> spatialCompression = interFrameEncode(frame, gazeX, gazeY, r);
+					LinkedList<Integer> referencePoints = interFrameEncode(frame, gazeX, gazeY, r);
 					change = false;
 					int threshold = -1;
-					for (int x : spatialCompression.keySet()){
+					for (int x : referencePoints){
 						if (Math.pow((x/3)%w - gazeX, 2) + Math.pow((x/3)/w - gazeY, 2) < r*r){
 							threshold = hdThresh;
 						}
@@ -173,17 +171,17 @@ public class Server extends Thread {
 					}
 					int old = 2;
 					byte[] oldVals = new byte[]{previous[0], previous[1], previous[2]};
-					for (Map.Entry<Integer, byte[]> px : spatialCompression.entrySet()){
-						while (old < px.getKey()){
+					for (Integer x : referencePoints){
+						while (old < x){
 							previous[old-2] = oldVals[0];
 							previous[old-1] = oldVals[1];
 							previous[old] = oldVals[2];
 							old++;
 						}
-						previous[px.getKey()-2] = px.getValue()[0];
-						previous[px.getKey()-1] = px.getValue()[1];
-						previous[px.getKey()] = px.getValue()[2];
-						old = px.getKey()+2;
+						previous[x-2] = frame[x-2];
+						previous[x-1] = frame[x-1];
+						previous[x] = frame[x];
+						old = x+2;
 					}
 				}
 			}
@@ -200,12 +198,11 @@ public class Server extends Thread {
 		}
 	}
 
-	// Note - considers a frame as a 1-D array, not a 2-D one, for terms of pixel locality. This is bad and needs to change
-	private LinkedHashMap<Integer, byte[]> interFrameEncode(byte[] frame, int gazeX, int gazeY, double r){
-    	LinkedHashMap<Integer, byte[]> encoded = new LinkedHashMap<>();
+	private LinkedList<Integer> interFrameEncode(byte[] frame, int gazeX, int gazeY, double r){
+    	LinkedList<Integer> referencePoints = new LinkedList<Integer>();
     	int thresh = SPATIAL_THRESH_HD;
     	int[] reference = new int[]{(int)frame[0], (int)frame[1], (int)frame[2]};
-    	encoded.put(2, new byte[]{frame[0], frame[1], frame[2]});
+    	referencePoints.add(2);
     	for (int x = 5; x < frame.length; x+=3){
 			if (Math.pow((x/3)%w - gazeX, 2) + Math.pow((x/3)/w - gazeY, 2) < r*r){ // In-focus region
 				thresh = SPATIAL_THRESH_HD;
@@ -213,15 +210,15 @@ public class Server extends Thread {
 			else {
 				thresh = SPATIAL_THRESH_LD;
 			}
-			if (((Math.abs(reference[0] - (int) frame[x - 2]) > thresh)
-					||(Math.abs(reference[1] - (int) frame[x - 1]) > thresh)
-					||(Math.abs(reference[2] - (int) frame[x]) > thresh))
-					||(x/3)%w ==2){
-				encoded.put(x, new byte[]{frame[x-2], frame[x-1], frame[x]});
+			if ((x/3)%w ==2
+					||((Math.abs(reference[0] - (int) frame[x - 2]) > thresh)
+						||(Math.abs(reference[1] - (int) frame[x - 1]) > thresh)
+						||(Math.abs(reference[2] - (int) frame[x]) > thresh))){
+				referencePoints.add(x);
 				reference = new int[]{(int) frame[x-2], (int)frame[x-1], (int)frame[x]};
 			}
 		}
-    	return encoded;
+    	return referencePoints;
 	}
 
 	private void write(String s){
