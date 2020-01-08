@@ -33,7 +33,7 @@ public class SimpleTemporalCompression implements TemporalCompression {
             if (Math.abs((int) previous[x] - (int) frame[x]) > threshold) {
                 change = true;
             }
-            if (!change){
+            if (!change && ((x/3)%w != 2)){
                 iter.remove();
             }
         }

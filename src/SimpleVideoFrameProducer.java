@@ -61,7 +61,6 @@ public class SimpleVideoFrameProducer extends VideoFrameProducer {
             i += 6;
             old = x + 2;
         }
-        first = false;
         System.out.println((1.0*toBeSent.length)/frame.length);
         return toBeSent;
     }
