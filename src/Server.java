@@ -63,9 +63,6 @@ public class Server extends Thread {
 
     @Override
     public void run(){
-    	String s = "";
-    	int changeCount = 0;
-    	int sameCount = 0;
 		try{
 			// Setting up connections
 			System.out.println("Server listening for TCP connection...");
@@ -127,7 +124,7 @@ public class Server extends Thread {
 					if (r == Double.NaN){
 						r = 2.0*h/3;
 					}
-					LinkedHashMap<Integer, Integer> compressedFrame = new LinkedHashMap<>();
+					LinkedHashMap<Integer, byte[]> compressedFrame = new LinkedHashMap<>();
 					LinkedHashMap<Integer, byte[]> spatialCompression = interFrameEncode(frame, gazeX, gazeY, r);
 					change = false;
 					int threshold = -1;
@@ -152,11 +149,7 @@ public class Server extends Thread {
 							change = true;
 						}
 						if (change){
-							compressedFrame.put(x, new Color((int)rgb[0]+128, (int)rgb[1]+128, (int)rgb[2]+128).getRGB());
-							changeCount++;
-						}
-						else{
-							sameCount++;
+							compressedFrame.put(x, rgb);
 						}
 					}
 					byte[] toBeSent = new byte[6*compressedFrame.size()]; //6 bytes needed for every int, int pair
@@ -166,11 +159,11 @@ public class Server extends Thread {
 							toBeSent[i] = (byte) ((x & 0x00FF0000) >> 16);
 							toBeSent[i + 1] = (byte) ((x & 0x0000FF00) >> 8);
 							toBeSent[i + 2] = (byte) ((x & 0x000000FF) >> 0);
-							int val = compressedFrame.get(x);
+							byte[] vals = compressedFrame.get(x);
 
-							toBeSent[i + 3] = (byte) ((val & 0x00FF0000) >> 16);
-							toBeSent[i + 4] = (byte) ((val & 0x0000FF00) >> 8);
-							toBeSent[i + 5] = (byte) ((val & 0x000000FF) >> 0);
+							toBeSent[i + 3] = vals[0];
+							toBeSent[i + 4] = vals[1];
+							toBeSent[i + 5] = vals[2];
 							i += 6;
 						}
 						stream.writeInt(toBeSent.length);

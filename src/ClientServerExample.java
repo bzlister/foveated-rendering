@@ -8,7 +8,7 @@ public class ClientServerExample {
         } catch (Exception e){
             System.out.println("Could not resolve IP address");
         }
-        Server server = new Server(5000, 6001, address, 20, 2, 15, 2);
+        Server server = new Server(5000, 6001, address, 20, 2, 20, 2);
         Client client = new Client(5000, 6001, address);
         server.start();
         client.start();
