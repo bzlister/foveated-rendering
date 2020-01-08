@@ -32,9 +32,12 @@ public class SimpleVideoFrameProducer extends VideoFrameProducer {
         converter.transform(yuv, rgb);
         byte[] frame = rgb.getData()[0];
         LinkedList<Integer> referencePoints = spatialCompression.interFrameEncode(frame, gazeX, gazeY, r, w);
-        if (!first){
-            referencePoints = temporalCompression.intraFrameEncode(frame, previous, referencePoints, gazeX, gazeY, r, w);
+        if (first){
+            first = false;
+            previous = frame;
+            return frame;
         }
+        referencePoints = temporalCompression.intraFrameEncode(frame, previous, referencePoints, gazeX, gazeY, r, w);
         byte[] toBeSent = new byte[6*referencePoints.size()];
         int old = 2;
         int i = 0;
@@ -44,7 +47,7 @@ public class SimpleVideoFrameProducer extends VideoFrameProducer {
                 previous[old - 2] = oldVals[0];
                 previous[old - 1] = oldVals[1];
                 previous[old] = oldVals[2];
-                old++;
+                old+=3;
             }
             previous[x - 2] = frame[x - 2];
             previous[x - 1] = frame[x - 1];
@@ -59,6 +62,7 @@ public class SimpleVideoFrameProducer extends VideoFrameProducer {
             old = x + 2;
         }
         first = false;
+        System.out.println((1.0*toBeSent.length)/frame.length);
         return toBeSent;
     }
 }

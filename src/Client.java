@@ -59,8 +59,6 @@ public class Client extends Thread {
 				image.setRGB((x/3)%w, (x/3)/w, value);
 				x+=3;
 			}
-			File outputfile = new File("C:/Users/bzlis/Documents/image.jpg");
-			ImageIO.write(image, "jpg", outputfile);
 			player = new VideoPlayer(w, h);
 			player.loadFrame(image);
 		} catch (IOException i){
@@ -83,7 +81,7 @@ public class Client extends Thread {
 					int x =((0&0xFF) << 24) + ((received[i]&0xFF) << 16) + ((received[i+1]&0xFF) << 8) + (received[i+2]&0xFF);
 					while (oldX < x){
 						image.setRGB((oldX/3)%w, (oldX/3)/w, val);
-						oldX += 1;
+						oldX += 3;
 					}
 					oldX = x+2;
 					val = new Color((int)received[i+3] + 128, (int)received[i+4]+128, (int)received[i+5]+128).getRGB();
