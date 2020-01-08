@@ -67,12 +67,15 @@ public class Server extends Thread {
     	int changeCount = 0;
     	int sameCount = 0;
 		try{
+			// Setting up connections
 			System.out.println("Server listening for TCP connection...");
 			serverSocket = new ServerSocket(tcpPort);
 			tcpSocket = serverSocket.accept();
 			System.out.println("Client connected on TCP");
 			stream = new DataOutputStream(tcpSocket.getOutputStream());
 			in = new DataInputStream(tcpSocket.getInputStream());
+
+			// Extracting frames from video
 			FrameGrab grab = FrameGrab.createFrameGrab(NIOUtils.readableChannel(file));
 			Picture picture;
 			boolean first = true;
@@ -88,19 +91,34 @@ public class Server extends Thread {
 				Picture p = Picture.create(w, h, ColorSpace.RGB);
 				converter.transform(picture, p);
 				byte[] frame = p.getData()[0];
+
+				// First frame protocol
 				if (first){
-					StringBuilder builder = new StringBuilder();
-					for (byte b : frame){
-						builder.append(b + " ");
-					}
-					write(builder.toString());
 					stream.writeInt(w);
 					stream.writeInt(h);
-					stream.writeInt(frame.length);
-					stream.write(frame);
-					first = false;
-					previous = frame;
+					LinkedHashMap<Integer,  byte[]> spatialCompression = interFrameEncode(frame, w/2, h/2, 1000);
+					byte[] toBeSent = new byte[6*spatialCompression.size()];
+					int i = 0;
+					if (toBeSent.length > 0) {
+						for (Integer x : spatialCompression.keySet()) {
+							toBeSent[i] = (byte) ((x & 0x00FF0000) >> 16);
+							toBeSent[i + 1] = (byte) ((x & 0x0000FF00) >> 8);
+							toBeSent[i + 2] = (byte) ((x & 0x000000FF) >> 0);
+							byte[] vals = spatialCompression.get(x);
+
+							toBeSent[i + 3] = vals[0];
+							toBeSent[i + 4] = vals[1];
+							toBeSent[i + 5] = vals[2];
+							i += 6;
+						}
+						stream.writeInt(toBeSent.length);
+						stream.write(toBeSent);
+						first = false;
+						previous = frame;
+					}
 				}
+
+				// Subsequent frame protocol
 				else {
 					int gazeX = in.readInt();
 					int gazeY = in.readInt();
@@ -155,11 +173,9 @@ public class Server extends Thread {
 							toBeSent[i + 5] = (byte) ((val & 0x000000FF) >> 0);
 							i += 6;
 						}
-						s += ((toBeSent.length*1.0)/frame.length) + " ";
 						stream.writeInt(toBeSent.length);
 						//DatagramPacket packet = new DatagramPacket(toBeSent, toBeSent.length, address, port);
 						//socket.send(packet);
-						System.out.println((toBeSent.length*1.0)/frame.length);
 						stream.write(toBeSent);
 					}
 					int old = 2;
@@ -178,7 +194,6 @@ public class Server extends Thread {
 					}
 				}
 			}
-			write(s);
 			stream.close();
 			tcpSocket.close();
 			socket.close();
