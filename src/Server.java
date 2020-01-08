@@ -122,66 +122,59 @@ public class Server extends Thread {
 					if (r == Double.NaN){
 						r = 2.0*h/3;
 					}
-					LinkedHashMap<Integer, byte[]> compressedFrame = new LinkedHashMap<>();
 					LinkedList<Integer> referencePoints = interFrameEncode(frame, gazeX, gazeY, r);
 					change = false;
 					int threshold = -1;
-					for (int x : referencePoints){
+					ListIterator<Integer> iter = referencePoints.listIterator();
+					while (iter.hasNext()){
+						int x = iter.next();
 						if (Math.pow((x/3)%w - gazeX, 2) + Math.pow((x/3)/w - gazeY, 2) < r*r){
 							threshold = hdThresh;
 						}
 						else {
 							threshold = ldThresh;
 						}
-						byte[] rgb = new byte[]{previous[x - 2], previous[x - 1], previous[x]};
 						if (Math.abs((int) previous[x - 2] - (int) frame[x - 2]) > threshold) {
-							rgb[0] = frame[x - 2];
 							change = true;
 						}
 						if (Math.abs((int) previous[x - 1] - (int) frame[x - 1]) > threshold) {
-							rgb[1] = frame[x - 1];
 							change = true;
 						}
 						if (Math.abs((int) previous[x] - (int) frame[x]) > threshold) {
-							rgb[2] = frame[x];
 							change = true;
 						}
-						if (change){
-							compressedFrame.put(x, rgb);
+						if (!change){
+							iter.remove();
 						}
 					}
-					byte[] toBeSent = new byte[6*compressedFrame.size()]; //6 bytes needed for every int, int pair
+					byte[] toBeSent = new byte[6*referencePoints.size()]; //6 bytes needed for every int, int pair
 					int i = 0;
 					if (toBeSent.length > 0) {
-						for (Integer x : compressedFrame.keySet()) {
+						int old = 2;
+						byte[] oldVals = new byte[]{previous[0], previous[1], previous[2]};
+						for (Integer x : referencePoints) {
+							while (old < x){
+								previous[old-2] = oldVals[0];
+								previous[old-1] = oldVals[1];
+								previous[old] = oldVals[2];
+								old++;
+							}
+							previous[x-2] = frame[x-2];
+							previous[x-1] = frame[x-1];
+							previous[x] = frame[x];
 							toBeSent[i] = (byte) ((x & 0x00FF0000) >> 16);
 							toBeSent[i + 1] = (byte) ((x & 0x0000FF00) >> 8);
 							toBeSent[i + 2] = (byte) ((x & 0x000000FF) >> 0);
-							byte[] vals = compressedFrame.get(x);
-
-							toBeSent[i + 3] = vals[0];
-							toBeSent[i + 4] = vals[1];
-							toBeSent[i + 5] = vals[2];
+							toBeSent[i + 3] = frame[x-2];
+							toBeSent[i + 4] = frame[x-1];
+							toBeSent[i + 5] = frame[x];
 							i += 6;
+							old = x+2;
 						}
 						stream.writeInt(toBeSent.length);
 						//DatagramPacket packet = new DatagramPacket(toBeSent, toBeSent.length, address, port);
 						//socket.send(packet);
 						stream.write(toBeSent);
-					}
-					int old = 2;
-					byte[] oldVals = new byte[]{previous[0], previous[1], previous[2]};
-					for (Integer x : referencePoints){
-						while (old < x){
-							previous[old-2] = oldVals[0];
-							previous[old-1] = oldVals[1];
-							previous[old] = oldVals[2];
-							old++;
-						}
-						previous[x-2] = frame[x-2];
-						previous[x-1] = frame[x-1];
-						previous[x] = frame[x];
-						old = x+2;
 					}
 				}
 			}
