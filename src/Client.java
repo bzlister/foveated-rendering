@@ -44,6 +44,10 @@ public class Client extends Thread {
 			dos = new DataOutputStream(tcpSocket.getOutputStream());
 			w = dis.readInt();
 			h = dis.readInt();
+			int[] gaze = getGaze(w, h);
+			dos.writeInt(gaze[0]);
+			dos.writeInt(gaze[1]);
+			dos.writeInt(gaze[2]);
 			System.out.println("Client TCP connected");
 			int size = dis.readInt();
 			byte[] initial = new byte[size];
@@ -82,7 +86,6 @@ public class Client extends Thread {
 						oldX += 1;
 					}
 					oldX = x+2;
-					//val = ((-1&0xFF) << 24) + ((received[i+3]&0xFF) << 16) + ((received[i+4]&0xFF) << 8) + (received[i+5]&0xFF);
 					val = new Color((int)received[i+3] + 128, (int)received[i+4]+128, (int)received[i+5]+128).getRGB();
 					image.setRGB((x/3)%w, (x/3)/w, val);
 					i+=6;

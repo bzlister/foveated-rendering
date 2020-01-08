@@ -8,7 +8,8 @@ public class ClientServerExample {
         } catch (Exception e){
             System.out.println("Could not resolve IP address");
         }
-        Server server = new Server(5000, 6001, address, 20, 2, 20, 2);
+        SimpleVideoFrameProducer producer = new SimpleVideoFrameProducer(new SimpleSpatialCompression(20, 2), new SimpleTemporalCompression(20, 2));
+        Server server = new Server(5000, 6001, address, producer);
         Client client = new Client(5000, 6001, address);
         server.start();
         client.start();
